@@ -245,7 +245,7 @@ def send_config_message(mqttClient):
 
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/disk_use/config",
-        payload=f"{{\"name\":\"Disk Use\","
+        payload=f"{{\"name\":\"Disk Usage\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"unit_of_measurement":"%",'
                 + '"value_template":"{{value_json.disk_use}}",'
@@ -260,7 +260,7 @@ def send_config_message(mqttClient):
     
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/memory_use/config",
-        payload=f"{{\"name\":\"Memory Use\","
+        payload=f"{{\"name\":\"Memory Usage\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"unit_of_measurement":"%",'
                 + '"value_template":"{{value_json.memory_use}}",'
@@ -388,7 +388,7 @@ def send_config_message(mqttClient):
         for drive in settings["external_drives"]:
             mqttClient.publish(
                 topic=f"homeassistant/sensor/{deviceName}/disk_use_{drive.lower()}/config",
-                payload=f"{{\"name\":\"Disk Use {drive}\","
+                payload=f"{{\"name\":\"Disk Usage {drive}\","
                         + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                         + '"unit_of_measurement":"%",'
                         + f"\"value_template\":\"{{{{value_json.disk_use_{drive.lower()}}}}}\","
