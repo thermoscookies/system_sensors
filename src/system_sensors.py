@@ -245,7 +245,7 @@ def send_config_message(mqttClient):
 
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/disk_use/config",
-        payload=f"{{\"name\":\"{deviceNameDisplay} Disk Use\","
+        payload=f"{{\"name\":\"Disk Use\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"unit_of_measurement":"%",'
                 + '"value_template":"{{value_json.disk_use}}",'
@@ -253,14 +253,14 @@ def send_config_message(mqttClient):
                 + f"\"availability_topic\":\"system-sensors/sensor/{deviceName}/availability\","
                 + f"\"device\":{{\"identifiers\":[\"{deviceName}_sensor\"],"
                 + f"\"name\":\"{deviceNameDisplay} Sensors\",\"model\":\"RPI {deviceNameDisplay}\", \"manufacturer\":\"RPI\"}},"
-                + f"\"icon\":\"mdi:micro-sd\"}}",
+                + f"\"icon\":\"mdi:harddisk\"}}",
         qos=1,
         retain=True,
     )
     
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/memory_use/config",
-        payload=f"{{\"name\":\"{deviceNameDisplay} Memory Use\","
+        payload=f"{{\"name\":\"Memory Use\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"unit_of_measurement":"%",'
                 + '"value_template":"{{value_json.memory_use}}",'
@@ -275,7 +275,7 @@ def send_config_message(mqttClient):
     
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/cpu_usage/config",
-        payload=f"{{\"name\":\"{deviceNameDisplay} Cpu Usage\","
+        payload=f"{{\"name\":\"Cpu Usage\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"unit_of_measurement":"%",'
                 + '"value_template":"{{value_json.cpu_usage}}",'
@@ -306,7 +306,7 @@ def send_config_message(mqttClient):
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/last_boot/config",
         payload='{"device_class":"timestamp",'
-                + f"\"name\":\"{deviceNameDisplay} Last Boot\","
+                + f"\"name\":\"Last Boot\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"value_template":"{{value_json.last_boot}}",'
                 + f"\"unique_id\":\"{deviceName}_sensor_last_boot\","
@@ -332,7 +332,7 @@ def send_config_message(mqttClient):
     )
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/host_ip/config",
-        payload=f"{{\"name\":\"{deviceNameDisplay} Host Ip\","
+        payload=f"{{\"name\":\"Host Ip\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"value_template":"{{value_json.host_ip}}",'
                 + f"\"unique_id\":\"{deviceName}_sensor_host_ip\","
@@ -345,7 +345,7 @@ def send_config_message(mqttClient):
     )
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/host_os/config",
-        payload=f"{{\"name\":\"{deviceNameDisplay} Host OS\","
+        payload=f"{{\"name\":\"Host OS\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"value_template":"{{value_json.host_os}}",'
                 + f"\"unique_id\":\"{deviceName}_sensor_host_os\","
@@ -388,7 +388,7 @@ def send_config_message(mqttClient):
         for drive in settings["external_drives"]:
             mqttClient.publish(
                 topic=f"homeassistant/sensor/{deviceName}/disk_use_{drive.lower()}/config",
-                payload=f"{{\"name\":\"{deviceNameDisplay} Disk Use {drive}\","
+                payload=f"{{\"name\":\"Disk Use {drive}\","
                         + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                         + '"unit_of_measurement":"%",'
                         + f"\"value_template\":\"{{{{value_json.disk_use_{drive.lower()}}}}}\","
