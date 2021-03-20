@@ -372,7 +372,7 @@ def send_config_message(mqttClient):
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/last_message/config",
         payload='{"device_class":"timestamp",'
-                + f"\"name\":\"{deviceNameDisplay} Last Message\","
+                + f"\"name\":\"Last Update\","
                 + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
                 + '"value_template":"{{value_json.last_message}}",'
                 + f"\"unique_id\":\"{deviceName}_sensor_last_message\","
