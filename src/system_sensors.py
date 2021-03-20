@@ -10,7 +10,6 @@ import time
 from datetime import timedelta
 from re import findall
 from subprocess import check_output
-from rpi_bad_power import new_under_voltage
 import paho.mqtt.client as mqtt
 import psutil
 import pytz
@@ -37,7 +36,6 @@ with open("/etc/os-release") as f:
 mqttClient = None
 WAIT_TIME_SECONDS = 60
 deviceName = None
-_underVoltage = None
 
 class ProgramKilled(Exception):
     pass
@@ -101,12 +99,10 @@ def on_message(client, userdata, message):
 def updateSensors():
     payload_str = (
         '{'
-        + f'"temperature": {get_temp()},'
         + f'"disk_use": {get_disk_usage("/")},'
         + f'"memory_use": {get_memory_usage()},'
         + f'"cpu_usage": {get_cpu_usage()},'
         + f'"swap_usage": {get_swap_usage()},'
-        + f'"power_status": "{get_rpi_power_status()}",'
         + f'"last_boot": "{get_last_boot()}",'
         + f'"last_message": "{get_last_message()}",'
         + f'"host_name": "{get_host_name()}",'
@@ -114,10 +110,6 @@ def updateSensors():
         + f'"host_os": "{get_host_os()}",'
         + f'"host_arch": "{get_host_arch()}"'
     )
-    if "check_available_updates" in settings and settings["check_available_updates"] and not apt_disabled:
-        payload_str = payload_str + f', "updates": {get_updates()}' 
-    if "check_wifi_strength" in settings and settings["check_wifi_strength"]:
-        payload_str = payload_str + f', "wifi_strength": {get_wifi_strength()}'
     if "external_drives" in settings:
         for drive in settings["external_drives"]:
             payload_str = (
@@ -139,17 +131,6 @@ def get_updates():
     return str(cache.get_changes().__len__())
 
 
-# Temperature method depending on system distro
-def get_temp():
-    temp = "";
-    if "rasp" in OS_DATA["ID"]:
-        reading = check_output(["vcgencmd", "measure_temp"]).decode("UTF-8")
-        temp = str(findall("\d+\.\d+", reading)[0])
-    else:
-        reading = check_output(["cat", "/sys/class/thermal/thermal_zone0/temp"]).decode("UTF-8")
-        temp = str(reading[0] + reading[1] + "." + reading[2])
-    return temp
-
 def get_disk_usage(path):
     return str(psutil.disk_usage(path).percent)
 
@@ -165,22 +146,6 @@ def get_cpu_usage():
 def get_swap_usage():
     return str(psutil.swap_memory().percent)
 
-
-def get_wifi_strength():  # check_output(["/proc/net/wireless", "grep wlan0"])
-    wifi_strength_value = check_output(
-                              [
-                                  "bash",
-                                  "-c",
-                                  "cat /proc/net/wireless | grep wlan0: | awk '{print int($4)}'",
-                              ]
-                          ).decode("utf-8").rstrip()
-    if not wifi_strength_value:
-        wifi_strength_value = "0"
-    return (wifi_strength_value)
-
-
-def get_rpi_power_status():
-    return _underVoltage.get()
 
 def get_host_name():
     return socket.gethostname()
@@ -212,12 +177,6 @@ def get_host_arch():
 
 def remove_old_topics():
     mqttClient.publish(
-        topic=f"homeassistant/sensor/{deviceNameDisplay}/{deviceNameDisplay}Temp/config",
-        payload='',
-        qos=1,
-        retain=False,
-    )
-    mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceNameDisplay}/{deviceNameDisplay}DiskUse/config",
         payload='',
         qos=1,
@@ -242,18 +201,6 @@ def remove_old_topics():
         retain=False,
     )
     mqttClient.publish(
-        topic=f"homeassistant/binary_sensor/{deviceNameDisplay}/{deviceNameDisplay}PowerStatus/config",
-        payload='',
-        qos=1,
-        retain=False,
-    )
-    mqttClient.publish(
-        topic=f"homeassistant/sensor/{deviceNameDisplay}/{deviceNameDisplay}PowerStatus/config",
-        payload='',
-        qos=1,
-        retain=False,
-    )
-    mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceNameDisplay}/{deviceNameDisplay}LastBoot/config",
         payload='',
         qos=1,
@@ -261,18 +208,6 @@ def remove_old_topics():
     )
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceNameDisplay}/{deviceNameDisplay}LastMessage/config",
-        payload='',
-        qos=1,
-        retain=False,
-    )
-    mqttClient.publish(
-        topic=f"homeassistant/sensor/{deviceNameDisplay}/{deviceNameDisplay}WifiStrength/config",
-        payload='',
-        qos=1,
-        retain=False,
-    )
-    mqttClient.publish(
-        topic=f"homeassistant/sensor/{deviceNameDisplay}/{deviceNameDisplay}Updates/config",
         payload='',
         qos=1,
         retain=False,
@@ -304,28 +239,10 @@ def check_settings(settings):
     if "client_id" not in settings:
         write_message_to_console("client_id not defined in settings.yaml! Please check the documentation")
         sys.exit()
-    if "power_integer_state" in settings:
-        write_message_to_console("power_integer_state is deprecated please remove this option power state is now a binary_sensor!")
-
 
 def send_config_message(mqttClient):
     write_message_to_console("send config message")
-    mqttClient.publish(
-        topic=f"homeassistant/sensor/{deviceName}/temperature/config",
-        payload='{"device_class":"temperature",'
-                + f"\"name\":\"{deviceNameDisplay} Temperature\","
-                + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
-                + '"unit_of_measurement":"°C",'
-                + '"value_template":"{{value_json.temperature}}",'
-                + f"\"unique_id\":\"{deviceName}_sensor_temperature\","
-                + f"\"availability_topic\":\"system-sensors/sensor/{deviceName}/availability\","
-                + f"\"device\":{{\"identifiers\":[\"{deviceName}_sensor\"],"
-                + f"\"name\":\"{deviceNameDisplay} Sensors\",\"model\":\"RPI {deviceNameDisplay}\", \"manufacturer\":\"RPI\"}},"
-                + f"\"icon\":\"mdi:thermometer\"}}",
-        qos=1,
-        retain=True,
-    )
-    
+
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/disk_use/config",
         payload=f"{{\"name\":\"{deviceNameDisplay} Disk Use\","
@@ -385,22 +302,6 @@ def send_config_message(mqttClient):
         qos=1,
         retain=True,
     )
-    
-    mqttClient.publish(
-        topic=f"homeassistant/binary_sensor/{deviceName}/power_status/config",
-        payload='{"device_class":"problem",'
-                + f"\"name\":\"{deviceNameDisplay} Under Voltage\","
-                + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
-                + '"value_template":"{{value_json.power_status}}",'
-                + f"\"unique_id\":\"{deviceName}_sensor_power_status\","
-                + f"\"availability_topic\":\"system-sensors/sensor/{deviceName}/availability\","
-                + f"\"device\":{{\"identifiers\":[\"{deviceName}_sensor\"],"
-                + f"\"name\":\"{deviceNameDisplay} Sensors\",\"model\":\"RPI {deviceNameDisplay}\", \"manufacturer\":\"RPI\"}}"
-                + f"}}",
-        qos=1,
-        retain=True,
-    )
-    
    
     mqttClient.publish(
         topic=f"homeassistant/sensor/{deviceName}/last_boot/config",
@@ -482,46 +383,7 @@ def send_config_message(mqttClient):
         qos=1,
         retain=True,
     )
-
-
-
-    if "check_available_updates" in settings and settings["check_available_updates"]:
-        # import apt
-        if(apt_disabled):
-            write_message_to_console("import of apt failed!")
-        else:
-            mqttClient.publish(
-                topic=f"homeassistant/sensor/{deviceName}/updates/config",
-                payload=f"{{\"name\":\"{deviceNameDisplay} Updates\","
-                        + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
-                        + '"value_template":"{{value_json.updates}}",'
-                        + f"\"unique_id\":\"{deviceName}_sensor_updates\","
-                        + f"\"availability_topic\":\"system-sensors/sensor/{deviceName}/availability\","
-                        + f"\"device\":{{\"identifiers\":[\"{deviceName}_sensor\"],"
-                        + f"\"name\":\"{deviceNameDisplay} Sensors\",\"model\":\"RPI {deviceNameDisplay}\", \"manufacturer\":\"RPI\"}},"
-                        + f"\"icon\":\"mdi:cellphone-arrow-down\"}}",
-                qos=1,
-                retain=True,
-            )
             
-
-    if "check_wifi_strength" in settings and settings["check_wifi_strength"]:
-        mqttClient.publish(
-            topic=f"homeassistant/sensor/{deviceName}/wifi_strength/config",
-            payload='{"device_class":"signal_strength",'
-                    + f"\"name\":\"{deviceNameDisplay} Wifi Strength\","
-                    + f"\"state_topic\":\"system-sensors/sensor/{deviceName}/state\","
-                    + '"unit_of_measurement":"dBm",'
-                    + '"value_template":"{{value_json.wifi_strength}}",'
-                    + f"\"unique_id\":\"{deviceName}_sensor_wifi_strength\","
-                    + f"\"availability_topic\":\"system-sensors/sensor/{deviceName}/availability\","
-                    + f"\"device\":{{\"identifiers\":[\"{deviceName}_sensor\"],"
-                    + f"\"name\":\"{deviceNameDisplay} Sensors\",\"model\":\"RPI {deviceNameDisplay}\", \"manufacturer\":\"RPI\"}},"
-                    + f"\"icon\":\"mdi:wifi\"}}",
-            qos=1,
-            retain=True,
-        )
-        
     if "external_drives" in settings:
         for drive in settings["external_drives"]:
             mqttClient.publish(
@@ -589,7 +451,6 @@ if __name__ == "__main__":
         send_config_message(mqttClient)
     except:
         write_message_to_console("something whent wrong")
-    _underVoltage = new_under_voltage()
     job = Job(interval=timedelta(seconds=WAIT_TIME_SECONDS), execute=updateSensors)
     job.start()
 

@@ -3,11 +3,9 @@ mqtt:
   port: 1234 #defaults to 1883
   user: test
   password: test
-deviceName: test
-client_id: test
-timezone: Europe/Brussels
+deviceName: system_sensors_
+client_id: system_sensors_
+America/Los_Angeles
 update_interval: 60 #Defaults to 60
-check_wifi_strength: true
-check_available_updates: true
-external_drives:
-  Drive1: /boot/
+# external_drives:
+#   Drive1: /boot/
