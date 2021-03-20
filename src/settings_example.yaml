@@ -5,7 +5,7 @@ mqtt:
   password: test
 deviceName: system_sensors_
 client_id: system_sensors_
-America/Los_Angeles
+timezone: America/Los_Angeles
 update_interval: 60 #Defaults to 60
 # external_drives:
 #   Drive1: /boot/
